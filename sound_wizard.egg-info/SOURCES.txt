@@ -1,0 +1,14 @@
+setup.py
+sound_wizard/__init__.py
+sound_wizard.egg-info/PKG-INFO
+sound_wizard.egg-info/SOURCES.txt
+sound_wizard.egg-info/dependency_links.txt
+sound_wizard.egg-info/top_level.txt
+sound_wizard/effects/__init__.py
+sound_wizard/effects/reverb.py
+sound_wizard/formats/__init__.py
+sound_wizard/formats/wav_read.py
+sound_wizard/formats/wav_write.py
+tests/__init__.py
+tests/test_formats/__init__.py
+tests/test_formats/test_formats.py
