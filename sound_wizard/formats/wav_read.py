@@ -2,25 +2,6 @@ import struct
 import os
 
 def read_wav(filename):
-    """
-    Read and parse a WAV audio file.
-    
-    Args:
-        filename: Path to the WAV file
-        
-    Returns:
-        dict:
-            - sample_rate: Sample rate in Hz (e.g., 44100)
-            - channels: Number of audio channels (1=mono, 2=stereo)
-            - bits_per_sample: Bit depth (e.g., 16, 24, 32)
-            - audio_format: Audio format (1=PCM)
-            - data: Raw audio data as bytes
-            - num_frames: Number of audio frames
-            
-    Raises:
-        ValueError: If file is not a valid WAV file
-        FileNotFoundError: If file doesn't exist
-    """
     if not os.path.exists(filename):
         raise FileNotFoundError(f"File not found: {filename}")
     
@@ -85,6 +66,38 @@ def read_wav(filename):
         bytes_per_sample = bits_per_sample // 8
         num_frames = len(audio_data) // (num_channels * bytes_per_sample) # [L, R], [L, R]
         
+        # raw samples
+        all_samples = unpack(audio_data, bits_per_sample)
+
+        # normalized samples
+        normalized_samples = normalize_samples(all_samples, bits_per_sample)
+
+        sample_array = []
+        # if stereo
+        if num_channels == 2:
+            left = normalized_samples[0::2] # start from 0 and go to end by 2 steps 
+            right = normalized_samples[1::2] # start from 1 and go to end by 2 steps
+            sample_array = [left, right]
+        elif num_channels == 1:
+            sample_array = [normalized_samples]
+
+        # normalized and transposed samples
+        sample_array = transpose_array(sample_array, num_channels)
+
+        # PROBLEM WAS!!!!!
+        # samples = [
+        #     [L0, L1, L2, L3, ...],  # Left channel
+        #     [R0, R1, R2, R3, ...]   # Right channel
+        # ]
+
+        # # What soundfile wants:
+        # samples = [ is this called interleaved?
+        #     [L0, R0],  # Frame 0
+        #     [L1, R1],  # Frame 1
+        #     [L2, R2],  # Frame 2
+        #     ...
+        # ]
+
         return {
             'sample_rate': sample_rate,
             'channels': num_channels,
@@ -92,5 +105,99 @@ def read_wav(filename):
             'audio_format': audio_format,
             'data': audio_data,
             'num_frames': num_frames,
-            'duration': num_frames / sample_rate # seconds
+            'duration': num_frames / sample_rate,
+            'samples': sample_array
         }
+    
+
+def unpack16(audio_data, bits_per_sample):
+    bytes_per_sample = bits_per_sample // 8
+
+    samples = []
+
+    # wave data standart is little endian 
+    # byte1 is low, byte2 is high
+    # 1- shift byte2 << 8
+    # 2- use or statment to combine byte1 & byte2
+    # 3- convert combined_value to signed
+    # 4- if value >= 2**(bits_per_sample - 1) then value = value - 2**bitsperSample
+    
+    for i in range(0, len(audio_data), bytes_per_sample):
+        byte1 = audio_data[i] # 0, 2, 4, 6, 8
+        byte2 = audio_data[i + 1] # 1, 3, 5, 7
+
+        # combine (little-endian)
+        value = byte1 | (byte2 << 8) # shift byte2 left by 8 bit
+
+        # convert to signed
+        if value >= 2 ** (bits_per_sample - 1): # negative when (bits_p_s - 1)th bits is 1 or active
+            value = value - (2 ** bits_per_sample)
+
+        samples.append(value)
+    return samples
+
+def unpack(audio_data, bits_per_sample):
+    # wave data standart is little endian 
+    # byte1 is low, byte2 is high
+    # 1- shift byte2 << 8
+    # 2- use or statment to combine byte1 & byte2
+    # 3- convert combined_value to signed
+    # 4- if value >= 2**(bits_per_sample - 1) then value = value - 2**bitsperSample
+
+    bytes_per_sample = bits_per_sample // 8
+
+    samples = []
+    
+    for i in range(0, len(audio_data), bytes_per_sample):
+        value = 0
+
+        for j in range(bytes_per_sample):
+            byte = audio_data[i + j]
+            value = value | (byte << (8 * j)) # first iteration value = byte[0]
+        
+        # handle 8 bits as unsigned
+        if bits_per_sample == 8:
+            value = value - 128
+        else:
+            # convert to signed
+            if value >= 2 ** (bits_per_sample - 1):
+                value = value - (2 ** bits_per_sample)
+
+        samples.append(value)
+    return samples
+
+def normalize_samples(samples, bits_per_sample):
+
+    
+    normalized = []
+
+    for sample in samples:
+        normalized.append(sample / (2 ** (bits_per_sample - 1)))
+
+    return normalized
+
+def transpose_array(samples, num_channels):
+    if num_channels == 1:
+        return samples[0]
+    
+    '''
+    the main goal is transpose 
+    samples = [[1,2,3,4], [5,6,7,8]] left and right channel data to
+
+    |
+    v
+
+    samples = [[1,5], [2,6], [3,7], [4,8]] 
+
+    '''
+
+    num_frames = len(samples[0]) # samples 0 is [1, 2, 3, 4] = 4
+    
+    frames = []
+    for i in range(num_frames):
+
+        frame = []
+        for channel in range(num_channels):
+            frame.append(samples[channel][i]) # i=0: frame = [samples[0][0], samples[1][0]] -> [1, 5]
+        frames.append(frame) # [[1,5], [2,6], [3,7]]
+    return frames
