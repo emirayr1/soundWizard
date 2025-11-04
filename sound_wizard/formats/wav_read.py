@@ -1,11 +1,11 @@
 import struct
 import os
 
-def read_wav(filename):
-    if not os.path.exists(filename):
-        raise FileNotFoundError(f"File not found: {filename}")
+def read_wav(file):
+    if not os.path.exists(file):
+        raise FileNotFoundError(f"File not found: {file}")
     
-    with open(filename, 'rb') as f:
+    with open(file, 'rb') as f:
         # Parse RIFF header (12 bytes)
         riff_header = f.read(12)
         if len(riff_header) < 12:
@@ -109,6 +109,17 @@ def read_wav(filename):
             'samples': sample_array
         }
     
+def write_wav(file, data, sample_rate):
+    
+    # 1- Denormalize the samples
+    # 2- Calculate sizes
+    # 3- Write RIFF header
+    # 4- Write fmt chunk
+    # 5- Write data chunk
+
+    for i in range(len(data)):
+        for j in range(2):
+            data[i][j] *= (2 ** 15)
 
 def unpack16(audio_data, bits_per_sample):
     bytes_per_sample = bits_per_sample // 8
