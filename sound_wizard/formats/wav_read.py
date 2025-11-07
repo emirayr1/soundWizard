@@ -109,7 +109,7 @@ def read_wav(file):
             'samples': sample_array
         }
     
-def write_wav(file, data, sample_rate):
+def write_wav(file, data, sample_rate, num_channels, bits_per_sample):
     
     # 1- Denormalize the samples
     # 2- Calculate sizes
@@ -117,9 +117,40 @@ def write_wav(file, data, sample_rate):
     # 4- Write fmt chunk
     # 5- Write data chunk
 
-    for i in range(len(data)):
-        for j in range(2):
-            data[i][j] *= (2 ** 15)
+    int_samples = denormalize_samples(data, bits_per_sample, num_channels)
+
+    audio_bytes = pack(int_samples, bits_per_sample, num_channels)
+
+    bytes_per_sample = bits_per_sample // 8
+    block_align = num_channels * bytes_per_sample
+    byte_rate = sample_rate * block_align
+    data_size = len(audio_bytes)
+    # data_size = len(int_samples)
+    fmt_chunk_size = 16
+    file_size = 36 + data_size
+
+
+    with open(file, 'wb') as f:
+        # RIFF HEADER (12 bytes)
+        f.write(b'RIFF')
+        f.write(struct.pack('<I', file_size))
+        f.write(b'WAVE')
+
+        # FMT CHUNK (24 bytes)
+        f.write(b'fmt ')
+        f.write(struct.pack('<I', 16)) # subchunk size
+        f.write(struct.pack('<H', 1)) # PCM
+        f.write(struct.pack('<H', num_channels))
+        f.write(struct.pack('<I', sample_rate))
+        f.write(struct.pack('<I', byte_rate))
+        f.write(struct.pack('<H', block_align))
+        f.write(struct.pack('<H', bits_per_sample))
+
+        # Write Data Chunk
+        f.write(b'data')
+        f.write(struct.pack('<I', data_size))
+        f.write(audio_bytes)
+        # f.write(int_samples)
 
 def unpack16(audio_data, bits_per_sample):
     bytes_per_sample = bits_per_sample // 8
@@ -177,6 +208,23 @@ def unpack(audio_data, bits_per_sample):
         samples.append(value)
     return samples
 
+def pack(audio_data, bits_per_sample, num_channels):
+    bytes_per_sample = bits_per_sample // 8
+    samples = []
+
+    for sample in range(0, len(audio_data), 1):
+        for channel in range(num_channels):
+            for j in range(0, bytes_per_sample, 1):
+                if j == bytes_per_sample - 1: # MSB
+                    if audio_data[sample][channel] < 0:
+                        samples.append(((audio_data[sample][channel] >> (8 * j)) & 0XFF) | 0X80)
+                    else:
+                        samples.append((audio_data[sample][channel] >> (8 * j)) & 0XFF)
+                else: # LSB
+                    samples.append((audio_data[sample][channel] >> (8 * j)) & 0XFF)
+
+    return bytes(samples)
+        
 def normalize_samples(samples, bits_per_sample):
 
     
@@ -212,3 +260,29 @@ def transpose_array(samples, num_channels):
             frame.append(samples[channel][i]) # i=0: frame = [samples[0][0], samples[1][0]] -> [1, 5]
         frames.append(frame) # [[1,5], [2,6], [3,7]]
     return frames
+
+def denormalize_samples(samples, bits_per_sample, num_channels) -> dict:
+    if num_channels == 1:
+        for i in range(len(samples)):
+            samples[i] *= (2 ** (bits_per_sample - 1))
+            samples[i] = int(samples[i])
+    elif num_channels >= 2:
+        for i in range(len(samples)):
+            for j in range(2):
+                samples[i][j] *= (2 ** (bits_per_sample - 1))
+                samples[i][j] = int(samples[i][j])
+    return samples
+
+def get_megabyte(file):
+    wav_data = read_wav(file)
+    sample_rate = wav_data['sample_rate']
+    bits_per_sample = wav_data['bits_per_sample']
+    num_channels = wav_data['channels']
+    duration = wav_data['duration']
+
+    bits_per_second = bits_per_sample * sample_rate * num_channels
+    bytes_per_second = bits_per_second / 8
+    total_bytes = bytes_per_second * duration
+
+    megabytes = total_bytes / (1024 * 1024)
+    return megabytes
