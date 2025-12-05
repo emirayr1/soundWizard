@@ -47,5 +47,5 @@ class GAIN:
         return self.samples
 
 gain = GAIN([1,2,3,4], 2)
-print(gain.get_rms())
+print(gain.get_samples())
 # print(gain.get_samples())
