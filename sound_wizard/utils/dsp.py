@@ -38,3 +38,22 @@ def frequency_domain_convolution(signal, kernel):
 
     return np.real(output_time_domain) # only real part
 
+def discrete_fourier_transform(x):
+
+    N = len(x)
+    X = []
+
+    for k in range(N):
+        re = 0
+        im = 0
+
+        for n in range(N):
+            euler = -2 * np.pi * k * n / N
+
+            re += x[n] * np.cos(euler)
+            im += x[n] * np.sin(euler)
+        
+        X.append(complex(re, im))
+    
+    return X
+
