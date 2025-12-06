@@ -57,3 +57,120 @@ def discrete_fourier_transform(x):
     
     return X
 
+def fast_fourier_transform(x):
+
+    """ 
+    *Recursive Cooley-Tukey FFT
+
+    Twiddle Factor = time shift for odd part of the signal 
+
+    evens = [A, B, C, D]
+    odds = [x, y, z, w]
+
+    len = 8,  angle = 360 / 8 = 45
+
+    first half (adding)
+    1 - A + (x -> 0dg)
+    2 - B + (y -> 45dg)
+    3 - C + (z -> 90dg)
+    4 - D + (w -> 135dg)
+
+    second half (sub)
+    1 - A - (x -> 0dg)
+    2 - B - (y -> 45dg)
+    3 - C - (z -> 90dg)
+    4 - D - (w -> 135dg)
+    
+    output[k] = evens[k] + turned_odds # adding
+    output[k + len / 2] = evens[k] - turned_odds # sub
+
+    """
+
+    N = len(x)
+
+    if N <= 1: # Recursion's Base Case
+        return x # Here is the number
+    
+    evens = fast_fourier_transform(x[0::2]) # A, solve this
+    odds = fast_fourier_transform(x[1::2]) # B, solve this
+
+    # odds and evens are calculated on this part
+
+    # combine
+    # each odd index shifts according to their k / N angle
+    T = [np.exp(-2j * np.pi * k / N) * odds[k] for k in range(N // 2)] 
+
+    left_part = [evens[k] + T[k] for k in range(N // 2)]
+    right_part = [evens[k] - T[k] for k in range(N // 2)]
+
+    return left_part + right_part # -> complex array output
+
+def fft_freq(n, d=1.0):
+    """
+    Docstring for fft_freq
+    
+    :param n: Signal Length (Total number of samples)
+    :param d: Time Difference (1/fs)
+    """
+
+    step_length = 1.0 / (n * d)
+
+    # FFT OUTPUT IS: [0, 1, 2, ... | ... -3, -2, -1]
+    # positive is 0 -> n//2 - 1
+    # negative is - n//2 -> 0
+    positive_indexes = list(range(0, (n+1) // 2)) 
+    negative_indexes = list(range(-(n//2), 0))
+
+    all_indexes = positive_indexes + negative_indexes
+
+    result = [index * step_length for index in all_indexes]
+
+    return result
+
+
+fs = 128
+t = np.arange(0, 1, 1/fs)
+N = fs
+signal = np.sin(2*np.pi*5*t) + 0.5 * np.sin(2*np.pi*20*t)
+
+fft_output = fast_fourier_transform(signal)
+
+# magnitude = sqrt(a^2 + b^2)
+fft_magnitude = np.abs(fft_output) / (N / 2)
+
+freq_axis = fft_freq(N, 1/fs)
+
+fft_mag_half = fft_magnitude[:N // 2]
+freq_axis_half = freq_axis[:N // 2]
+
+
+def plot_fft(_time, _original_signal, _freq_axis_half, _fft_mag_half):
+
+    # --- ADIM 4: ÇİZİM (PLOTTING) ---
+    plt.figure(figsize=(12, 8)) # Geniş bir tuval açalım
+
+    # 1. GRAFİK: ZAMAN ALANI (Time Domain)
+    plt.subplot(2, 1, 1) # 2 satır, 1 sütunluk yerin 1.si
+    plt.plot(_time, _original_signal, color='blue')
+    plt.title("Zaman Alanı Sinyali (Karışık 5Hz + 20Hz)")
+    plt.xlabel("Zaman (saniye)")
+    plt.ylabel("Genlik")
+    plt.grid(True, linestyle='--', alpha=0.6)
+
+    # 2. GRAFİK: FREKANS ALANI (Frequency Domain)
+    plt.subplot(2, 1, 2) # 2 satır, 1 sütunluk yerin 2.si
+    # Çubuk grafik (stem plot) frekansları daha net gösterir
+    plt.stem(_freq_axis_half, _fft_mag_half, basefmt=" ", linefmt='red', markerfmt='ro')
+
+    plt.title("Frekans Alanı (FFT Sonucu)")
+    plt.xlabel("Frekans (Hz)")
+    plt.ylabel("Büyüklük (Magnitude)")
+    plt.grid(True, linestyle='--', alpha=0.6)
+
+    # X eksenini sınırlayalım ki net görelim (0 ile 40 Hz arası yeterli)
+    plt.xlim(0, 40)
+
+    plt.tight_layout() # Grafikler birbirine girmesin
+    plt.show()
+
+plot_fft(t, signal, freq_axis_half, fft_mag_half)
