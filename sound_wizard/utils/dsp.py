@@ -57,10 +57,12 @@ def discrete_fourier_transform(x):
     
     return X
 
-def fast_fourier_transform(x):
+def fft_core(x, dir):
 
     """ 
     *Recursive Cooley-Tukey FFT
+
+    dir: -1 FFT, +1 IFFT e^(dir)2pi_j
 
     Twiddle Factor = time shift for odd part of the signal 
 
@@ -91,19 +93,29 @@ def fast_fourier_transform(x):
     if N <= 1: # Recursion's Base Case
         return x # Here is the number
     
-    evens = fast_fourier_transform(x[0::2]) # A, solve this
-    odds = fast_fourier_transform(x[1::2]) # B, solve this
+    evens = fft_core(x[0::2], dir) # A, solve this
+    odds = fft_core(x[1::2], dir) # B, solve this
 
     # odds and evens are calculated on this part
 
     # combine
     # each odd index shifts according to their k / N angle
-    T = [np.exp(-2j * np.pi * k / N) * odds[k] for k in range(N // 2)] 
+    T = [np.exp(dir * 2j * np.pi * k / N) * odds[k] for k in range(N // 2)] 
 
     left_part = [evens[k] + T[k] for k in range(N // 2)]
     right_part = [evens[k] - T[k] for k in range(N // 2)]
 
     return left_part + right_part # -> complex array output
+
+def fft(x):
+    return fft_core(x, dir=-1)
+
+def ifft(x):
+    raw_output = fft_core(x, dir=1)
+    N = len(x)
+
+    normalized_output = [value / N for value in raw_output]
+    return normalized_output
 
 def fft_freq(n, d=1.0):
     """
