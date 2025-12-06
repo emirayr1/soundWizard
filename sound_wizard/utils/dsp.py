@@ -203,22 +203,6 @@ def cross_corelation(x, y):
     result = np.correlate(x, y, mode='full')
     return result[N-1:]
 
-fs = 128
-t = np.arange(0, 1, 1/fs)
-N = fs
-signal = np.sin(2*np.pi*5*t) + 0.5 * np.sin(2*np.pi*20*t)
-
-fft_output = fft(signal)
-
-# magnitude = sqrt(a^2 + b^2)
-fft_magnitude = np.abs(fft_output) / (N / 2)
-
-freq_axis = fft_freq(N, 1/fs)
-
-fft_mag_half = fft_magnitude[:N // 2]
-freq_axis_half = freq_axis[:N // 2]
-
-
 def plot_fft(_time, _original_signal, _freq_axis_half, _fft_mag_half):
 
     # --- ADIM 4: ÇİZİM (PLOTTING) ---
@@ -247,5 +231,21 @@ def plot_fft(_time, _original_signal, _freq_axis_half, _fft_mag_half):
 
     plt.tight_layout() # Grafikler birbirine girmesin
     plt.show()
+
+fs = 128
+t = np.arange(0, 1, 1/fs)
+N = fs
+signal = np.sin(2*np.pi*5*t) + 0.5 * np.sin(2*np.pi*20*t)
+
+fft_output = fft(signal)
+
+# magnitude = sqrt(a^2 + b^2)
+fft_magnitude = np.abs(fft_output) / (N / 2)
+
+freq_axis = fft_freq(N, 1/fs)
+
+fft_mag_half = fft_magnitude[:N // 2]
+freq_axis_half = freq_axis[:N // 2]
+
 
 plot_fft(t, signal, freq_axis_half, fft_mag_half)
