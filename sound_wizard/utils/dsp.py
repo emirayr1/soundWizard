@@ -1,6 +1,35 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+#add taylor series sine wave 
+
+class WINDOW:
+    def __init__(self, N):
+        self.N = N
+        self.n = np.arange(N)
+        
+    def rectangular(self):
+        return np.ones(self.N)
+    
+    def hanning(self):
+        # Formula: 0.5 - 0.5 * cos(2*pi*n / (N-1))
+        return 0.5 - 0.5 * np.cos((2 * np.pi * self.n) / (self.N - 1))
+
+    def hamming(self):
+        # Formula: 0.54 - 0.46 * cos(2*pi*n / (N-1))
+        return 0.54 - 0.46 * np.cos((2 * np.pi * self.n) / (self.N - 1))
+
+    def blackman(self):
+        # Formula: 0.42 - 0.5*cos(...) + 0.08*cos(...)
+        term1 = 0.5 * np.cos((2 * np.pi * self.n) / (self.N - 1))
+        term2 = 0.08 * np.cos((4 * np.pi * self.n) / (self.N - 1))
+        return 0.42 - term1 + term2
+    
+    def bartlett(self):
+        # Triangle window
+        # Math: 1 - | (n - (N-1)/2) / ((N-1)/2) |
+        return 1.0 - np.abs((self.n - (self.N - 1) / 2.0) / ((self.N - 1) / 2.0))
+
 def time_domain_convolution(signal, kernel):
 
     N = len(signal)
@@ -87,7 +116,8 @@ def fft_core(x, dir):
     output[k + len / 2] = evens[k] - turned_odds # sub
 
     """
-
+    # add numpy vectorization later TODO TODO TODO TODO
+    
     N = len(x)
 
     if N <= 1: # Recursion's Base Case
@@ -139,13 +169,46 @@ def fft_freq(n, d=1.0):
 
     return result
 
+def stft(signal, frame_size, hop_size, window_func):
+    # study this later TODO TODO TODO TODO
+    
+    signal_len = len(signal)
+    
+    num_frames = 1 + (signal_len - frame_size) // hop_size
+    
+    stft_matrix = []
+    
+    # m=0: [10 20 30 40] m=1: [30 40 50 60] m=2: [50 60 70 80]
+    for m in range(num_frames):
+        start_index = m * hop_size
+        end_index = start_index + frame_size
+        
+        chunk = signal[start_index:end_index]
+        windowed_chunk = chunk * window_func
+        
+        fft_result = fft(windowed_chunk)
+        fft_result = fft_result[:frame_size // 2]
+        
+        stft_matrix.append(fft_result)
+        
+        return np.array(stft_matrix).T
+
+def auto_correlation(x):
+    N = len(x)
+    result = np.correlate(x, x, mode='full')
+    return result[N-1:]
+
+def cross_corelation(x, y):
+    N = len(x)
+    result = np.correlate(x, y, mode='full')
+    return result[N-1:]
 
 fs = 128
 t = np.arange(0, 1, 1/fs)
 N = fs
 signal = np.sin(2*np.pi*5*t) + 0.5 * np.sin(2*np.pi*20*t)
 
-fft_output = fast_fourier_transform(signal)
+fft_output = fft(signal)
 
 # magnitude = sqrt(a^2 + b^2)
 fft_magnitude = np.abs(fft_output) / (N / 2)
