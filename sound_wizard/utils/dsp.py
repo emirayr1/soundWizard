@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 #add taylor series sine wave 
-
+       
 class WINDOW:
     def __init__(self, N):
         self.N = N
@@ -232,20 +232,20 @@ def plot_fft(_time, _original_signal, _freq_axis_half, _fft_mag_half):
     plt.tight_layout() # Grafikler birbirine girmesin
     plt.show()
 
-fs = 128
-t = np.arange(0, 1, 1/fs)
-N = fs
-signal = np.sin(2*np.pi*5*t) + 0.5 * np.sin(2*np.pi*20*t)
+# fs = 128
+# t = np.arange(0, 1, 1/fs)
+# N = fs
+# signal = np.sin(2*np.pi*5*t) + 0.5 * np.sin(2*np.pi*20*t)
 
-fft_output = fft(signal)
+# fft_output = fft(signal)
 
-# magnitude = sqrt(a^2 + b^2)
-fft_magnitude = np.abs(fft_output) / (N / 2)
+# # magnitude = sqrt(a^2 + b^2)
+# fft_magnitude = np.abs(fft_output) / (N / 2)
 
-freq_axis = fft_freq(N, 1/fs)
+# freq_axis = fft_freq(N, 1/fs)
 
-fft_mag_half = fft_magnitude[:N // 2]
-freq_axis_half = freq_axis[:N // 2]
+# fft_mag_half = fft_magnitude[:N // 2]
+# freq_axis_half = freq_axis[:N // 2]
 
 
-plot_fft(t, signal, freq_axis_half, fft_mag_half)
+# plot_fft(t, signal, freq_axis_half, fft_mag_half)
